@@ -1818,7 +1818,7 @@ function saveCampaign() {
   ['c-name','c-spent'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('c-edit-idx').value = '';
   document.getElementById('camp-modal-title').textContent = 'Nuova campagna';
-  const campToSave = editIdx !== '' ? campaigns[parseInt(editIdx)] : campaigns[0];
+  const campToSave = editIdx !== '' ? campaigns[parseInt(editIdx)] : campaigns[campaigns.length - 1];
   sbSaveCampaign(campToSave).then(() => renderAll());
   renderAll();
 }
