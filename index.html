@@ -1851,10 +1851,10 @@ function deleteCampaign(i) {
 }
 
 function getCampEarned(idx) {
-  return leads.filter(l => l.campaign == idx && l.source === 'ads').reduce((s, l) => s + calcEarned(l), 0);
+  return leads.filter(l => String(l.campaign) === String(idx) && l.source === 'ads').reduce((s, l) => s + calcEarned(l), 0);
 }
 function getCampLeads(idx) {
-  return leads.filter(l => l.campaign == idx && l.source === 'ads').length;
+  return leads.filter(l => String(l.campaign) === String(idx) && l.source === 'ads').length;
 }
 
 // ─── RENDER: LEAD DETAIL ─────────────────────────────────────────────────────
@@ -1890,7 +1890,7 @@ function openDetail(id) {
     </div>${line}`;
   }).join('');
 
-  const campName = lead.campaign !== '' && campaigns[lead.campaign] ? campaigns[lead.campaign].name : '—';
+  const campName = lead.source === 'ads' && lead.campaign !== '' && campaigns[lead.campaign] ? campaigns[lead.campaign].name : '—';
 
   document.getElementById('detail-body').innerHTML = `
     <div class="detail-grid">
@@ -2035,7 +2035,7 @@ function renderLeads() {
   empty.style.display = 'none';
   tbody.innerHTML = filtered.map(l => {
     const e = calcEarned(l); const p = calcPotential(l); const ph = currentPhase(l);
-    const campName = l.campaign !== '' && campaigns[l.campaign] ? campaigns[l.campaign].name : '—';
+    const campName = l.source === 'ads' && l.campaign !== '' && campaigns[l.campaign] ? campaigns[l.campaign].name : '—';
     return `<tr onclick="openDetail('${l.id}')">
       <td><div class="lead-cell"><div class="avatar">${(l.nome[0] + (l.cognome?.[0] || '')).toUpperCase()}</div><div><div class="lead-name">${l.nome} ${l.cognome || ''}</div><div class="lead-contact">${l.phone || ''}</div></div></div></td>
       <td>${pipelineBadge(l, true)}</td>
