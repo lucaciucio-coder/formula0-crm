@@ -392,7 +392,7 @@
     font-size: 11px; font-weight: 700; padding: 4px 10px;
     border-radius: 6px; letter-spacing: 0.01em; cursor: pointer;
     transition: opacity .15s; white-space: nowrap;
-    min-width: 130px; justify-content: flex-start;
+    min-width: 118px; justify-content: flex-start;
   }
   .pipeline-badge:hover { opacity: 0.8; }
   .pip-da_contattare { background: rgba(107,114,128,0.15); color: #9ca3af; border: 1px solid rgba(107,114,128,0.25); }
@@ -552,17 +552,19 @@
     </div>
     <div class="kpi-grid" id="dash-kpi"></div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
-      <div class="card" style="margin-bottom:16px">
-        <div class="card-header"><div class="card-title">Pipeline</div></div>
-        <div class="card-body" style="padding:14px 20px" id="dash-pipeline"></div>
+      <div style="display:flex;flex-direction:column;gap:16px">
+        <div class="card" style="flex:1;min-height:0">
+          <div class="card-header"><div class="card-title">Pipeline</div></div>
+          <div class="card-body" style="padding:14px 20px" id="dash-pipeline"></div>
+        </div>
+        <div class="card" id="dash-roi-card" style="flex:1;min-height:0">
+          <div class="card-header"><div class="card-title">ROI campagne</div></div>
+          <div class="card-body" id="dash-roi"></div>
+        </div>
       </div>
       <div class="card">
         <div class="card-header"><div class="card-title">Funnel conversioni</div></div>
         <div class="card-body" id="dash-funnel"></div>
-      </div>
-      <div class="card" id="dash-roi-card">
-        <div class="card-header"><div class="card-title">ROI campagne</div></div>
-        <div class="card-body" id="dash-roi"></div>
       </div>
     </div>
     <div class="card">
@@ -619,7 +621,7 @@
             <option value="">Tutte le fasi</option>
             <option value="scoperta">Lead acquisito</option>
             <option value="bonus">Bonus app</option>
-            <option value="mensile">Mensile</option>
+            <option value="mensile">Starter</option>
             <option value="lifetime">Lifetime</option>
             <option value="trading">Trading</option>
           </select>
@@ -646,7 +648,7 @@
               <div class="cdd-item selected" onclick="setCddFilter('phase','','Tutte le fasi')">Tutte le fasi</div>
               <div class="cdd-item" onclick="setCddFilter('phase','scoperta','Lead acquisito')">Lead acquisito</div>
               <div class="cdd-item" onclick="setCddFilter('phase','bonus','Bonus app')">Bonus app</div>
-              <div class="cdd-item" onclick="setCddFilter('phase','mensile','Mensile')">Mensile</div>
+              <div class="cdd-item" onclick="setCddFilter('phase','mensile','Starter')">Starter</div>
               <div class="cdd-item" onclick="setCddFilter('phase','trading','Trading')">Trading</div>
               <div class="cdd-item" onclick="setCddFilter('phase','lifetime','Lifetime')">Lifetime</div>
             </div>
@@ -783,7 +785,7 @@
         <div class="field" id="camp-field"><label>Campagna</label>
           <select id="l-campaign"><option value="">— nessuna —</option></select>
         </div>
-        <div class="field" id="months-field"><label>Mesi mensile attivi</label>
+        <div class="field" id="months-field"><label>Starter attivi</label>
           <input type="number" id="l-months" placeholder="0" min="0">
         </div>
       </div>
@@ -950,8 +952,8 @@ function showLoader(on) {
 const STAGES = [
   { id: 'scoperta',     label: 'Lead acquisito', val: null, desc: '' },
   { id: 'bonus',        label: 'Bonus app',      val: null, desc: '' },
-  { id: 'mensile',      label: 'Mensile',        val: 97,   desc: '€97/mese ricorrente' },
-  { id: 'affiliazione', label: 'Affiliazione',   val: null, desc: 'Porta referral' },
+  { id: 'mensile',      label: 'Starter',        val: 97,   desc: '€97 una volta sola' },
+  { id: 'affiliazione', label: 'Affiliazione',   val: null, desc: '' },
   { id: 'trading',      label: 'Trading',        val: null, desc: '' },
   { id: 'lifetime',     label: 'Lifetime',       val: null, desc: '' }
 ];
@@ -1589,6 +1591,11 @@ function toggleCampField() {
   const src = document.getElementById("l-source").value;
   const campField = document.getElementById("camp-field");
   if (campField) campField.style.display = src === "ads" ? "" : "none";
+  // clear campaign when not ads
+  if (src !== "ads") {
+    const sel = document.getElementById("l-campaign");
+    if (sel) sel.value = "";
+  }
 }
 function populateCampSelect(selectedVal) {
   const sel = document.getElementById('l-campaign');
@@ -1613,7 +1620,7 @@ function saveLead() {
     age: document.getElementById('l-age').value,
     pipeline: document.getElementById('l-pipeline')?.value || 'da_contattare',
     source: document.getElementById('l-source').value,
-    campaign: document.getElementById('l-campaign').value,
+    campaign: document.getElementById('l-source').value === 'ads' ? document.getElementById('l-campaign').value : '',
     months: parseInt(document.getElementById('l-months').value) || 0,
     note: document.getElementById('l-note').value.trim(),
     lifetimePrice: parseFloat(document.getElementById('l-lifetime-price')?.value) || 997,
@@ -1699,7 +1706,7 @@ function calcEarned(lead) {
   const extrasSum = (lead.extras || []).reduce((s, ex) => s + (parseFloat(ex.amt) || 0), 0);
   const legacyEarned = lead.extras ? 0 : (lead.earned || 0);
   let e = legacyEarned + extrasSum + bonusSum;
-  if (lead.stages.mensile === 'done' && lead.months > 0) e += lead.months * 97;
+  if (lead.stages.mensile === 'done') e += 97;
   if (lead.stages.lifetime === 'done') e += (lead.lifetimePrice || 997);
   return e;
 }
@@ -1777,7 +1784,7 @@ function phaseBadge(phase) {
     affiliazione: 'badge-amber', lifetime: 'badge-green', trading: 'badge-green',
     completato: 'badge-completato'
   };
-  const labels = { scoperta: 'Lead acquisito', bonus: 'Bonus app', mensile: 'Mensile', affiliazione: 'Affiliazione', lifetime: 'Lifetime', trading: 'Trading', completato: '★ Completato' };
+  const labels = { scoperta: 'Lead acquisito', bonus: 'Bonus app', mensile: 'Starter', affiliazione: 'Affiliazione', lifetime: 'Lifetime', trading: 'Trading', completato: '★ Completato' };
   return `<span class="badge ${map[phase] || 'badge-gray'}">${labels[phase] || phase}</span>`;
 }
 
@@ -1844,10 +1851,10 @@ function deleteCampaign(i) {
 }
 
 function getCampEarned(idx) {
-  return leads.filter(l => l.campaign == idx).reduce((s, l) => s + calcEarned(l), 0);
+  return leads.filter(l => l.campaign == idx && l.source === 'ads').reduce((s, l) => s + calcEarned(l), 0);
 }
 function getCampLeads(idx) {
-  return leads.filter(l => l.campaign == idx).length;
+  return leads.filter(l => l.campaign == idx && l.source === 'ads').length;
 }
 
 // ─── RENDER: LEAD DETAIL ─────────────────────────────────────────────────────
@@ -1899,11 +1906,11 @@ function openDetail(id) {
     <div class="section-label" style="margin-bottom:8px">Dettagli</div>
     <div class="info-row"><span class="info-row-label">Stato pipeline</span><span class="info-row-val">${pipelineBadge(lead, true)}</span></div>
     <div class="info-row"><span class="info-row-label">Fonte</span><span class="info-row-val"><span class="badge ${SOURCE_BADGE[lead.source] || 'badge-gray'}">${SOURCE_LABEL[lead.source] || lead.source}</span></span></div>
-    <div class="info-row"><span class="info-row-label">Campagna</span><span class="info-row-val">${campName}</span></div>
+    ${lead.source === 'ads' ? `<div class="info-row"><span class="info-row-label">Campagna</span><span class="info-row-val">${campName}</span></div>` : ''}
     ${lead.phone ? `<div class="info-row"><span class="info-row-label">Contatto</span><span class="info-row-val">${lead.phone}</span></div>` : ''}
     ${lead.age ? `<div class="info-row"><span class="info-row-label">Età</span><span class="info-row-val">${lead.age} anni</span></div>` : ''}
     ${lead.stages.lifetime === 'done' ? `<div class="info-row"><span class="info-row-label">Lifetime</span><span class="info-row-val" style="color:var(--accent-light);font-weight:700">€${lead.lifetimePrice || 997}${(lead.lifetimePrice && lead.lifetimePrice !== 997) ? ` <span style="font-size:11px;color:var(--text3);font-weight:400">(sconto €${997 - lead.lifetimePrice})</span>` : ''}</span></div>` : ''}
-    ${!lead.stages.lifetime || lead.stages.lifetime !== 'done' ? (lead.months ? `<div class="info-row"><span class="info-row-label">Mesi mensile</span><span class="info-row-val">${lead.months} × €97 = ${fmt(lead.months * 97)}</span></div>` : '') : ''}
+    ${lead.stages.mensile === 'done' && lead.stages.lifetime !== 'done' ? `<div class="info-row"><span class="info-row-label">Starter</span><span class="info-row-val" style="color:var(--accent-light)">€97</span></div>` : ''}
     <div class="info-row"><span class="info-row-label">Data aggiunta</span><span class="info-row-val">${lead.date}</span></div>
     ${lead.extras && lead.extras.length > 0 ? lead.extras.map(ex => `<div class="info-row"><span class="info-row-label">Altro${ex.note ? ': ' + ex.note : ''}</span><span class="info-row-val" style="color:var(--accent-light)">+€${parseFloat(ex.amt)||0}</span></div>`).join('') : (lead.earned ? `<div class="info-row"><span class="info-row-label">Altro guadagno</span><span class="info-row-val" style="color:var(--accent-light)">+€${lead.earned}</span></div>` : '')}
     ${(() => {
@@ -2109,13 +2116,13 @@ function renderAnalytics() {
   const totalEarned = leads.reduce((s, l) => s + calcEarned(l), 0);
   const totalPotential = leads.reduce((s, l) => s + calcPotential(l), 0);
   const avgPerLead = leads.length ? totalEarned / leads.length : 0;
-  const totalMonthly = leads.filter(l => l.stages.mensile === 'done').reduce((s, l) => s + (l.months || 0) * 97, 0);
+  const totalMonthly = leads.filter(l => l.stages.mensile === 'done').length * 97;
 
   document.getElementById('analytics-kpi').innerHTML = `
     <div class="kpi-card positive"><div class="kpi-label">Guadagno totale</div><div class="kpi-val green">${fmt(totalEarned)}</div></div>
     <div class="kpi-card info"><div class="kpi-label">Potenziale residuo</div><div class="kpi-val" style="color:var(--blue)">${fmt(totalPotential)}</div></div>
     <div class="kpi-card info"><div class="kpi-label">Media / lead</div><div class="kpi-val">${fmt(avgPerLead)}</div></div>
-    <div class="kpi-card positive"><div class="kpi-label">Da mensili</div><div class="kpi-val green">${fmt(totalMonthly)}</div><div class="kpi-sub">${leads.filter(l => l.stages.mensile === 'done').length} attivi</div></div>
+    <div class="kpi-card positive"><div class="kpi-label">Da Starter</div><div class="kpi-val green">${fmt(totalMonthly)}</div><div class="kpi-sub">${leads.filter(l => l.stages.mensile === 'done').length} acquistati</div></div>
   `;
 
   const sources = ['ads', 'organico', 'passaparola'];
@@ -2146,7 +2153,7 @@ function renderAnalytics() {
 
   const breakdown = [
     { label: 'Lifetime', val: leads.filter(l => l.stages.lifetime === 'done').reduce((s,l) => s + (l.lifetimePrice || 997), 0) },
-    { label: 'Mensili ricorrenti', val: leads.reduce((s, l) => s + (l.stages.mensile === 'done' ? (l.months || 0) * 97 : 0), 0) },
+    { label: 'Starter', val: leads.filter(l => l.stages.mensile === 'done').length * 97 },
     { label: 'Bonus app', val: leads.reduce((s, l) => { const bc = l.bonusAppsChecked && l.bonusAppsChecked.length > 0 ? l.bonusAppsChecked.reduce((bs, id) => { const app = bonusApps.find(a => a.id === id); return bs + (app ? app.earn : 0); }, 0) : (l.bonusEarned || 0); return s + bc; }, 0) },
   ];
   const breakTotal = breakdown.reduce((s, b) => s + b.val, 0) || 1;
