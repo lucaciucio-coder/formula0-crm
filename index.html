@@ -936,6 +936,7 @@ async function loadAll() {
   showLoader(false);
   renderDashboard();
   renderSettings();
+  saveAllCampaigns(); // save any unsaved campaigns from previous sessions
 }
 
 function showLoader(on) {
@@ -984,6 +985,17 @@ async function sbSaveCampaign(camp) {
   } else {
     const res = await sbFetch('campaigns', 'POST', { data });
     if (res && res[0]) { camp._sbid = res[0].id; camp.id = res[0].id; }
+  }
+}
+
+async function saveAllCampaigns() {
+  for (const camp of campaigns) {
+    if (!camp._sbid) {
+      // new campaign not yet in Supabase
+      const { _sbid, id, ...data } = camp;
+      const res = await sbFetch('campaigns', 'POST', { data });
+      if (res && res[0]) { camp._sbid = res[0].id; }
+    }
   }
 }
 
@@ -1818,8 +1830,14 @@ function saveCampaign() {
   ['c-name','c-spent'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('c-edit-idx').value = '';
   document.getElementById('camp-modal-title').textContent = 'Nuova campagna';
-  const campToSave = editIdx !== '' ? campaigns[parseInt(editIdx)] : campaigns[campaigns.length - 1];
-  sbSaveCampaign(campToSave).then(() => renderAll());
+  if (editIdx !== '') {
+    // editing existing campaign
+    const campToEdit = campaigns[parseInt(editIdx)];
+    sbSaveCampaign(campToEdit).then(() => renderAll());
+  } else {
+    // new campaign: save all unsaved ones
+    saveAllCampaigns().then(() => renderAll());
+  }
   renderAll();
 }
 
