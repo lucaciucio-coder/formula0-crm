@@ -1720,7 +1720,7 @@ function calcEarned(lead) {
   let e = legacyEarned + extrasSum + bonusSum;
   if (lead.stages.mensile === 'done') e += 97;
   if (lead.stages.lifetime === 'done') e += (lead.lifetimePrice || 997);
-  return e;
+  return Math.round(e);
 }
 
 function calcPotential(lead) {
@@ -1811,7 +1811,7 @@ function fmtRoi(roi) {
 }
 
 // ─── CAMPAIGN CRUD ───────────────────────────────────────────────────────────
-function saveCampaign() {
+async function saveCampaign() {
   const name = document.getElementById('c-name').value.trim();
   if (!name) { alert('Inserisci il nome campagna'); return; }
   const editIdx = document.getElementById('c-edit-idx').value;
@@ -1821,22 +1821,24 @@ function saveCampaign() {
     status: document.getElementById('c-status').value,
     spent: parseFloat(document.getElementById('c-spent').value) || 0
   };
-  if (editIdx !== '') {
-    campaigns[parseInt(editIdx)] = { ...campaigns[parseInt(editIdx)], ...data };
-  } else {
-    campaigns.push({ id: Date.now(), ...data });
-  }
   closeModal('campaign');
   ['c-name','c-spent'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('c-edit-idx').value = '';
   document.getElementById('camp-modal-title').textContent = 'Nuova campagna';
+
   if (editIdx !== '') {
-    // editing existing campaign
-    const campToEdit = campaigns[parseInt(editIdx)];
-    sbSaveCampaign(campToEdit).then(() => renderAll());
+    campaigns[parseInt(editIdx)] = { ...campaigns[parseInt(editIdx)], ...data };
+    await sbSaveCampaign(campaigns[parseInt(editIdx)]);
   } else {
-    // new campaign: save all unsaved ones
-    saveAllCampaigns().then(() => renderAll());
+    // POST new campaign directly to Supabase
+    const res = await sbFetch('campaigns', 'POST', { data });
+    if (res && res[0]) {
+      campaigns.push({ ...data, id: res[0].id, _sbid: res[0].id });
+    } else {
+      // fallback: push locally and retry on next load
+      campaigns.push({ id: Date.now(), ...data });
+      console.error('Campaign save failed, saved locally');
+    }
   }
   renderAll();
 }
