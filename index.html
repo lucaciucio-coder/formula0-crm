@@ -621,7 +621,6 @@
             <option value="">Tutte le fasi</option>
             <option value="scoperta">Lead acquisito</option>
             <option value="bonus">Bonus app</option>
-            <option value="mensile">Starter</option>
             <option value="lifetime">Lifetime</option>
             <option value="trading">Trading</option>
           </select>
@@ -648,7 +647,6 @@
               <div class="cdd-item selected" onclick="setCddFilter('phase','','Tutte le fasi')">Tutte le fasi</div>
               <div class="cdd-item" onclick="setCddFilter('phase','scoperta','Lead acquisito')">Lead acquisito</div>
               <div class="cdd-item" onclick="setCddFilter('phase','bonus','Bonus app')">Bonus app</div>
-              <div class="cdd-item" onclick="setCddFilter('phase','mensile','Starter')">Starter</div>
               <div class="cdd-item" onclick="setCddFilter('phase','trading','Trading')">Trading</div>
               <div class="cdd-item" onclick="setCddFilter('phase','lifetime','Lifetime')">Lifetime</div>
             </div>
@@ -785,9 +783,7 @@
         <div class="field" id="camp-field"><label>Campagna</label>
           <select id="l-campaign"><option value="">— nessuna —</option></select>
         </div>
-        <div class="field" id="months-field"><label>Starter attivi</label>
-          <input type="number" id="l-months" placeholder="0" min="0">
-        </div>
+
       </div>
       <div class="field" style="margin-bottom:14px">
         <label>Stato pipeline</label>
@@ -815,7 +811,7 @@
       <div id="lifetime-price-row" style="display:none;margin-top:8px">
         <div class="field" style="margin:0">
           <label>Prezzo pagato lifetime €</label>
-          <input type="number" id="l-lifetime-price" placeholder="997" min="0">
+          <input type="number" id="l-lifetime-price" placeholder="600" min="0">
         </div>
       </div>
 
@@ -953,7 +949,6 @@ function showLoader(on) {
 const STAGES = [
   { id: 'scoperta',     label: 'Lead acquisito', val: null, desc: '' },
   { id: 'bonus',        label: 'Bonus app',      val: null, desc: '' },
-  { id: 'mensile',      label: 'Starter',        val: 97,   desc: '€97 una volta sola' },
   { id: 'affiliazione', label: 'Affiliazione',   val: null, desc: '' },
   { id: 'trading',      label: 'Trading',        val: null, desc: '' },
   { id: 'lifetime',     label: 'Lifetime',       val: null, desc: '' }
@@ -1171,7 +1166,7 @@ function closeModal(type) {
   if (type === 'lead') resetLeadForm();
 }
 function resetLeadForm() {
-  ['l-id','l-nome','l-cognome','l-phone','l-age','l-note','l-months','l-lifetime-price','l-date'].forEach(id => {
+  ['l-id','l-nome','l-cognome','l-phone','l-age','l-note','l-lifetime-price','l-date'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.value = '';
   });
@@ -1190,7 +1185,7 @@ function buildStagesList(stateMap) {
   const lifetimeDone = stateMap && stateMap['lifetime'] === 'done';
   cont.innerHTML = STAGES.map(s => {
     const state = stateMap ? (stateMap[s.id] || '') : (s.id === 'scoperta' ? 'done' : '');
-    const hidden = lifetimeDone && (s.id === 'mensile' || s.id === 'affiliazione');
+    const hidden = lifetimeDone && s.id === 'affiliazione';
     return `<div class="stage-tri" id="tri-${s.id}" data-stage="${s.id}" data-state="${state}" style="${hidden ? 'display:none' : ''}">
       <div class="stage-tri-info">
         <div class="stage-check-label">${s.label}</div>
@@ -1225,10 +1220,8 @@ function buildStagesList(stateMap) {
   const priceInput = document.getElementById('l-lifetime-price');
   if (priceRow && priceInput) {
     priceRow.style.display = lifetimeDone ? 'block' : 'none';
-    if (lifetimeDone) priceInput.value = (stateMap && stateMap['lifetimePrice']) ? stateMap['lifetimePrice'] : 997;
+    if (lifetimeDone) priceInput.value = (stateMap && stateMap['lifetimePrice']) ? stateMap['lifetimePrice'] : 600;
   // hide months field if lifetime done
-  const mfEl = document.getElementById('months-field');
-  if (mfEl) mfEl.style.display = lifetimeDone ? 'none' : '';
   }
 }
 
@@ -1256,13 +1249,11 @@ function setStageState(stageId, val, btn) {
   if (stageId === 'lifetime') {
     const priceRow = document.getElementById('lifetime-price-row');
     if (priceRow) priceRow.style.display = newState === 'done' ? 'block' : 'none';
-    const mf = document.getElementById('months-field');
-    if (mf) mf.style.display = newState === 'done' ? 'none' : '';
     if (newState === 'done') {
       const pf = document.getElementById('l-lifetime-price');
-      if (pf && !pf.value) pf.value = 997;
+      if (pf && !pf.value) pf.value = 600;
     }
-    ['mensile','affiliazione'].forEach(id => {
+    ['affiliazione'].forEach(id => {
       const t = document.getElementById('tri-' + id);
       if (!t) return;
       if (newState === 'done') {
@@ -1633,9 +1624,8 @@ function saveLead() {
     pipeline: document.getElementById('l-pipeline')?.value || 'da_contattare',
     source: document.getElementById('l-source').value,
     campaign: document.getElementById('l-source').value === 'ads' ? document.getElementById('l-campaign').value : '',
-    months: parseInt(document.getElementById('l-months').value) || 0,
     note: document.getElementById('l-note').value.trim(),
-    lifetimePrice: parseFloat(document.getElementById('l-lifetime-price')?.value) || 997,
+    lifetimePrice: parseFloat(document.getElementById('l-lifetime-price')?.value) || 600,
     bonusEarned: parseFloat(document.getElementById('l-bonus-earned').value) || 0,
     bonusCustomEarns: {..._bonusCustomEarns},
     extras: getExtras(),
@@ -1684,13 +1674,12 @@ function openEditLead(id) {
   document.getElementById('l-source').value = lead.source;
   toggleCampField();
   const pipSel = document.getElementById('l-pipeline'); if (pipSel) pipSel.value = lead.pipeline || 'da_contattare';
-  document.getElementById('l-months').value = lead.months || '';
   document.getElementById('l-note').value = lead.note || '';
   buildExtraRows(lead.extras || (lead.earned ? [{amt: lead.earned, note: lead.earnedNote || ''}] : []));
   _bonusCustomEarns = lead.bonusCustomEarns || {};
   _bonusAppStates = lead.bonusAppStates ||
     Object.fromEntries((lead.bonusAppsChecked || []).map(id => [String(id), 'done']));
-  buildStagesList({...lead.stages, lifetimePrice: lead.lifetimePrice || 997,
+  buildStagesList({...lead.stages, lifetimePrice: lead.lifetimePrice || 600,
     bonusAppStates: _bonusAppStates, bonusAppsChecked: lead.bonusAppsChecked || []});
   populateCampSelect(lead.campaign);
   toggleCampField();
@@ -1718,8 +1707,7 @@ function calcEarned(lead) {
   const extrasSum = (lead.extras || []).reduce((s, ex) => s + (parseFloat(ex.amt) || 0), 0);
   const legacyEarned = lead.extras ? 0 : (lead.earned || 0);
   let e = legacyEarned + extrasSum + bonusSum;
-  if (lead.stages.mensile === 'done') e += 97;
-  if (lead.stages.lifetime === 'done') e += (lead.lifetimePrice || 997);
+  if (lead.stages.lifetime === 'done') e += (lead.lifetimePrice || 600);
   return Math.round(e);
 }
 
@@ -1743,16 +1731,13 @@ function calcPotential(lead) {
     }
   }
   // if lifetime is done or planned (not 'no'), mensile is irrelevant
-  const lifetimeActive = s.lifetime === 'done';
-  if (!lifetimeActive && s.mensile !== 'done' && s.mensile !== 'no') p += 97;
-  if (!lifetimeActive && s.affiliazione !== 'done' && s.affiliazione !== 'no') p += 0;
-  if (s.lifetime !== 'done' && s.lifetime !== 'no') p += 997;
+  if (s.lifetime !== 'done' && s.lifetime !== 'no') p += 600;
   return p;
 }
 
 function currentPhase(lead) {
   if (lead.stages.lifetime === 'done') return 'completato';
-  const order = ['trading', 'affiliazione', 'mensile', 'bonus', 'scoperta'];
+  const order = ['trading', 'affiliazione', 'bonus', 'scoperta'];
   for (const s of order) { if (lead.stages[s] === 'done') return s; }
   return 'scoperta';
 }
@@ -1792,11 +1777,11 @@ function cyclePipeline(id) {
 
 function phaseBadge(phase) {
   const map = {
-    scoperta: 'badge-gray', bonus: 'badge-blue', mensile: 'badge-amber',
+    scoperta: 'badge-gray', bonus: 'badge-blue',
     affiliazione: 'badge-amber', lifetime: 'badge-green', trading: 'badge-green',
     completato: 'badge-completato'
   };
-  const labels = { scoperta: 'Lead acquisito', bonus: 'Bonus app', mensile: 'Starter', affiliazione: 'Affiliazione', lifetime: 'Lifetime', trading: 'Trading', completato: '★ Completato' };
+  const labels = { scoperta: 'Lead acquisito', bonus: 'Bonus app', affiliazione: 'Affiliazione', lifetime: 'Lifetime', trading: 'Trading', completato: '★ Completato' };
   return `<span class="badge ${map[phase] || 'badge-gray'}">${labels[phase] || phase}</span>`;
 }
 
@@ -1891,7 +1876,7 @@ function openDetail(id) {
 
   const lifetimeDone = lead.stages.lifetime === 'done';
   const visibleStages = STAGES.filter(s => {
-    if (lifetimeDone && (s.id === 'mensile' || s.id === 'affiliazione')) return false;
+    if (lifetimeDone && s.id === 'affiliazione') return false;
     if (lead.stages[s.id] === 'no') return false;
     return true;
   });
@@ -1929,8 +1914,7 @@ function openDetail(id) {
     ${lead.source === 'ads' ? `<div class="info-row"><span class="info-row-label">Campagna</span><span class="info-row-val">${campName}</span></div>` : ''}
     ${lead.phone ? `<div class="info-row"><span class="info-row-label">Contatto</span><span class="info-row-val">${lead.phone}</span></div>` : ''}
     ${lead.age ? `<div class="info-row"><span class="info-row-label">Età</span><span class="info-row-val">${lead.age} anni</span></div>` : ''}
-    ${lead.stages.lifetime === 'done' ? `<div class="info-row"><span class="info-row-label">Lifetime</span><span class="info-row-val" style="color:var(--accent-light);font-weight:700">€${lead.lifetimePrice || 997}${(lead.lifetimePrice && lead.lifetimePrice !== 997) ? ` <span style="font-size:11px;color:var(--text3);font-weight:400">(sconto €${997 - lead.lifetimePrice})</span>` : ''}</span></div>` : ''}
-    ${lead.stages.mensile === 'done' && lead.stages.lifetime !== 'done' ? `<div class="info-row"><span class="info-row-label">Starter</span><span class="info-row-val" style="color:var(--accent-light)">€97</span></div>` : ''}
+    ${lead.stages.lifetime === 'done' ? `<div class="info-row"><span class="info-row-label">Lifetime</span><span class="info-row-val" style="color:var(--accent-light);font-weight:700">€${lead.lifetimePrice || 600}${(lead.lifetimePrice && lead.lifetimePrice !== 600) ? ` <span style="font-size:11px;color:var(--text3);font-weight:400">(sconto €${600 - lead.lifetimePrice})</span>` : ''}</span></div>` : ''}
     <div class="info-row"><span class="info-row-label">Data aggiunta</span><span class="info-row-val">${lead.date}</span></div>
     ${lead.extras && lead.extras.length > 0 ? lead.extras.map(ex => `<div class="info-row"><span class="info-row-label">Altro${ex.note ? ': ' + ex.note : ''}</span><span class="info-row-val" style="color:var(--accent-light)">+€${parseFloat(ex.amt)||0}</span></div>`).join('') : (lead.earned ? `<div class="info-row"><span class="info-row-label">Altro guadagno</span><span class="info-row-val" style="color:var(--accent-light)">+€${lead.earned}</span></div>` : '')}
     ${(() => {
@@ -2136,13 +2120,12 @@ function renderAnalytics() {
   const totalEarned = leads.reduce((s, l) => s + calcEarned(l), 0);
   const totalPotential = leads.reduce((s, l) => s + calcPotential(l), 0);
   const avgPerLead = leads.length ? totalEarned / leads.length : 0;
-  const totalMonthly = leads.filter(l => l.stages.mensile === 'done').length * 97;
 
   document.getElementById('analytics-kpi').innerHTML = `
     <div class="kpi-card positive"><div class="kpi-label">Guadagno totale</div><div class="kpi-val green">${fmt(totalEarned)}</div></div>
     <div class="kpi-card info"><div class="kpi-label">Potenziale residuo</div><div class="kpi-val" style="color:var(--blue)">${fmt(totalPotential)}</div></div>
     <div class="kpi-card info"><div class="kpi-label">Media / lead</div><div class="kpi-val">${fmt(avgPerLead)}</div></div>
-    <div class="kpi-card positive"><div class="kpi-label">Da Starter</div><div class="kpi-val green">${fmt(totalMonthly)}</div><div class="kpi-sub">${leads.filter(l => l.stages.mensile === 'done').length} acquistati</div></div>
+
   `;
 
   const sources = ['ads', 'organico', 'passaparola'];
@@ -2172,8 +2155,7 @@ function renderAnalytics() {
   }).join('');
 
   const breakdown = [
-    { label: 'Lifetime', val: leads.filter(l => l.stages.lifetime === 'done').reduce((s,l) => s + (l.lifetimePrice || 997), 0) },
-    { label: 'Starter', val: leads.filter(l => l.stages.mensile === 'done').length * 97 },
+    { label: 'Lifetime', val: leads.filter(l => l.stages.lifetime === 'done').reduce((s,l) => s + (l.lifetimePrice || 600), 0) },
     { label: 'Bonus app', val: leads.reduce((s, l) => { const bc = l.bonusAppsChecked && l.bonusAppsChecked.length > 0 ? l.bonusAppsChecked.reduce((bs, id) => { const app = bonusApps.find(a => a.id === id); return bs + (app ? app.earn : 0); }, 0) : (l.bonusEarned || 0); return s + bc; }, 0) },
   ];
   const breakTotal = breakdown.reduce((s, b) => s + b.val, 0) || 1;
