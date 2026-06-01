@@ -539,10 +539,16 @@
           <input type="date" id="custom-end" style="width:130px;font-size:12px;padding:6px 10px" onchange="applyCustomPeriod()">
         </div>
       </div>
-      <button class="btn primary" onclick="openModal('lead')">
-        <svg fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
-        Nuovo lead
-      </button>
+      <div style="display:flex;gap:8px">
+        <button class="btn" onclick="openModal('extra')" style="border-color:var(--amber);color:var(--amber)">
+          <svg fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+          Nuova entrata
+        </button>
+        <button class="btn primary" onclick="openModal('lead')">
+          <svg fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+          Nuovo lead
+        </button>
+      </div>
     </div>
     <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:18px">
       <button class="ads-toggle-btn active" id="dash-filter-all" onclick="setDashFilter('all',this)">Tutto</button>
@@ -716,9 +722,15 @@
       <div class="card-header"><div class="card-title">Lead per social (organico)</div></div>
       <div class="card-body" id="analytics-social"></div>
     </div>
-    <div class="card">
-      <div class="card-header"><div class="card-title">Da dove vengono i soldi</div></div>
-      <div class="card-body" id="analytics-breakdown"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+      <div class="card">
+        <div class="card-header"><div class="card-title">Da dove vengono i soldi</div></div>
+        <div class="card-body" id="analytics-breakdown"></div>
+      </div>
+      <div class="card">
+        <div class="card-header"><div class="card-title">Entrate extra</div></div>
+        <div class="card-body" id="analytics-extra"></div>
+      </div>
     </div>
   </div>
 
@@ -920,6 +932,7 @@ async function sbFetch(table, method = 'GET', body = null, query = '') {
 
 let leads = [];
 let campaigns = [];
+let extraIncomes = [];
 let bonusApps = [
   { id: 1, name: 'Revolut',        earn: 30,   active: true },
   { id: 2, name: 'BBVA',           earn: 20,   active: true },
@@ -932,14 +945,16 @@ let bonusApps = [
 async function loadAll() {
   showLoader(true);
   try {
-    const [l, c, a] = await Promise.all([
+    const [l, c, a, ei] = await Promise.all([
       sbFetch('leads', 'GET', null, '?order=created_at.desc'),
       sbFetch('campaigns', 'GET', null, '?order=created_at.desc'),
-      sbFetch('bonus_apps', 'GET', null, '?order=sort_order.asc')
+      sbFetch('bonus_apps', 'GET', null, '?order=sort_order.asc'),
+      sbFetch('extra_income', 'GET', null, '?order=created_at.desc')
     ]);
     if (l) leads = l.map(r => ({ ...r.data, id: r.id, _sbid: r.id }));
     if (c) campaigns = c.map(r => ({ ...r.data, id: r.id, _sbid: r.id }));
     if (a && a.length > 0) bonusApps = a.map(r => ({ ...r.data, id: r.id, _sbid: r.id }));
+    if (ei) extraIncomes = ei.map(r => ({ ...r.data, id: r.id, _sbid: r.id }));
   } catch(e) { console.error('loadAll error', e); }
   showLoader(false);
   renderDashboard();
@@ -1170,6 +1185,10 @@ function openModal(type, skipReset) {
     buildStagesList();
     populateCampSelect();
     toggleCampField();
+  }
+  if (type === 'extra') {
+    const n = new Date();
+    document.getElementById('ei-date').value = `${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}-${String(n.getDate()).padStart(2,'0')}`;
   }
   document.getElementById('overlay-' + type).classList.add('open');
 }
@@ -2211,6 +2230,23 @@ function renderAnalytics() {
     { label: 'Bonus app', val: leads.reduce((s, l) => { const bc = l.bonusAppsChecked && l.bonusAppsChecked.length > 0 ? l.bonusAppsChecked.reduce((bs, id) => { const app = bonusApps.find(a => a.id === id); return bs + (app ? app.earn : 0); }, 0) : (l.bonusEarned || 0); return s + bc; }, 0) },
   ];
   const breakTotal = breakdown.reduce((s, b) => s + b.val, 0) || 1;
+  // extra income analytics
+  const eiTotal = totalExtraIncome();
+  const eiEl = document.getElementById('analytics-extra');
+  if (eiEl) {
+    eiEl.innerHTML = `
+      <div style="margin-bottom:14px">
+        <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;font-weight:600;margin-bottom:6px">Totale entrate extra</div>
+        <div style="font-size:28px;font-weight:800;color:var(--amber);font-family:JetBrains Mono,monospace">€${Math.round(eiTotal)}</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:4px">${extraIncomes.length} entrate registrate</div>
+      </div>
+      ${extraIncomes.slice(0,3).map(e => `<div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border);font-size:12px">
+        <span style="color:var(--text2)">${e.note || '—'}</span>
+        <span style="color:var(--amber);font-weight:600;font-family:JetBrains Mono,monospace">+€${e.amount}</span>
+      </div>`).join('')}
+      <button class="btn ghost" style="margin-top:12px;font-size:12px;width:100%;justify-content:center" onclick="openExtraList()">Vedi tutte →</button>`;
+  }
+
   document.getElementById('analytics-breakdown').innerHTML = `
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px">
       ${breakdown.map(b => {
@@ -2243,8 +2279,108 @@ function renderAll() {
 
 
 
+
+// ─── EXTRA INCOME ────────────────────────────────────────────────────────────
+async function saveExtraIncome() {
+  const amount = parseFloat(document.getElementById('ei-amount').value) || 0;
+  const note = document.getElementById('ei-note').value.trim();
+  const dateVal = document.getElementById('ei-date').value;
+  if (!amount) { alert('Inserisci un importo'); return; }
+  const data = {
+    amount,
+    note,
+    date: dateVal ? new Date(dateVal).toLocaleDateString('it-IT') : todayStr()
+  };
+  const res = await sbFetch('extra_income', 'POST', { data });
+  if (res && res[0]) {
+    extraIncomes.unshift({ ...data, id: res[0].id, _sbid: res[0].id });
+  } else {
+    extraIncomes.unshift({ ...data, id: Date.now() });
+  }
+  closeModal('extra');
+  document.getElementById('ei-amount').value = '';
+  document.getElementById('ei-note').value = '';
+  renderAll();
+}
+
+async function deleteExtraIncome(id) {
+  if (!confirm('Eliminare questa entrata?')) return;
+  const ei = extraIncomes.find(e => String(e.id) === String(id));
+  extraIncomes = extraIncomes.filter(e => String(e.id) !== String(id));
+  if (ei && ei._sbid) await sbFetch('extra_income', 'DELETE', null, `?id=eq.${ei._sbid}`);
+  renderAll();
+  openExtraList();
+}
+
+function openExtraList() {
+  const body = document.getElementById('extra-list-body');
+  const total = extraIncomes.reduce((s, e) => s + (e.amount || 0), 0);
+  if (!extraIncomes.length) {
+    body.innerHTML = '<div style="color:var(--text3);font-size:13px;padding:8px 0">Nessuna entrata ancora.</div>';
+  } else {
+    body.innerHTML = `<div style="margin-bottom:14px;font-size:13px;color:var(--text2)">Totale: <span style="color:var(--amber);font-weight:700;font-family:JetBrains Mono,monospace">€${Math.round(total)}</span></div>` +
+      '<div style="display:flex;flex-direction:column;gap:8px">' +
+      extraIncomes.map(e => `
+        <div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--bg3);border-radius:var(--radius);border:1px solid var(--border)">
+          <div style="flex:1">
+            <div style="font-weight:600;font-size:13px">${e.note || '—'}</div>
+            <div style="font-size:11px;color:var(--text3);margin-top:2px">${e.date || ''}</div>
+          </div>
+          <div style="font-family:JetBrains Mono,monospace;font-weight:700;color:var(--amber);font-size:14px">+€${e.amount}</div>
+          <button class="btn danger" style="padding:4px 8px;font-size:11px" onclick="deleteExtraIncome('${e.id}')">✕</button>
+        </div>`).join('') +
+      '</div>';
+  }
+  openModal('extra-list');
+}
+
+function totalExtraIncome() {
+  return extraIncomes.reduce((s, e) => s + (e.amount || 0), 0);
+}
+// ─── END EXTRA INCOME ────────────────────────────────────────────────────────
+
 // ─── INIT ────────────────────────────────────────────────────────────────────
 loadAll();
 </script>
+
+<!-- ========== MODAL: NUOVA ENTRATA ========== -->
+<div class="overlay" id="overlay-extra">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-head">
+      <div class="modal-title">Nuova entrata extra</div>
+      <button class="close-btn" onclick="closeModal('extra')">
+        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row-2" style="margin-bottom:14px">
+        <div class="field"><label>Importo €</label><input type="number" id="ei-amount" placeholder="0" min="0" step="0.01"></div>
+        <div class="field"><label>Data</label><input type="date" id="ei-date"></div>
+      </div>
+      <div class="field"><label>Descrizione</label><input type="text" id="ei-note" placeholder="Es: commissione YouTube, sponsorship..."></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn" onclick="closeModal('extra')">Annulla</button>
+      <button class="btn primary" onclick="saveExtraIncome()">Salva</button>
+    </div>
+  </div>
+</div>
+
+<!-- ========== MODAL: TUTTE LE ENTRATE EXTRA ========== -->
+<div class="overlay" id="overlay-extra-list">
+  <div class="modal" style="max-width:560px">
+    <div class="modal-head">
+      <div class="modal-title">Tutte le entrate extra</div>
+      <button class="close-btn" onclick="closeModal('extra-list')">
+        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div class="modal-body" id="extra-list-body"></div>
+    <div class="modal-foot">
+      <button class="btn" onclick="closeModal('extra-list')">Chiudi</button>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
