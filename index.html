@@ -654,8 +654,8 @@
         </div>
       </div>
       <div class="table-wrap"><table>
-        <colgroup><col style="width:auto"><col style="width:150px"><col style="width:90px"><col style="width:120px"><col style="width:150px"><col style="width:110px"><col style="width:100px"><col style="width:90px"><col style="width:50px"></colgroup>
-        <thead><tr><th>Lead</th><th>Stato</th><th>Fonte</th><th>Campagna</th><th>Fase attuale</th><th>Guadagnato</th><th>Potenziale</th><th>Data</th><th></th></tr></thead>
+        <colgroup><col style="width:auto"><col style="width:140px"><col style="width:85px"><col style="width:100px"><col style="width:110px"><col style="width:130px"><col style="width:100px"><col style="width:90px"><col style="width:80px"><col style="width:50px"></colgroup>
+        <thead><tr><th>Lead</th><th>Stato</th><th>Fonte</th><th>Piattaforma</th><th>Campagna</th><th>Fase attuale</th><th>Guadagnato</th><th>Potenziale</th><th>Data</th><th></th></tr></thead>
         <tbody id="leads-tbody"></tbody>
       </table></div>
       <div id="leads-empty" class="empty" style="display:none">
@@ -2065,7 +2065,8 @@ function renderLeads() {
       <td><div class="lead-cell"><div class="avatar">${(l.nome[0] + (l.cognome?.[0] || '')).toUpperCase()}</div><div><div class="lead-name">${l.nome} ${l.cognome || ''}</div><div class="lead-contact">${l.phone || ''}</div></div></div></td>
       <td>${pipelineBadge(l, true)}</td>
       <td><span class="badge ${SOURCE_BADGE[l.source] || 'badge-gray'}">${SOURCE_LABEL[l.source] || l.source}</span></td>
-      <td style="font-size:12px;color:var(--text3);max-width:140px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${campName}</td>
+      <td style="font-size:12px;color:var(--text2)">${l.social ? ({instagram:'Instagram',tiktok:'TikTok',telegram:'Telegram',youtube:'YouTube'}[l.social]||l.social) : '—'}</td>
+      <td style="font-size:12px;color:var(--text3);max-width:110px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${campName}</td>
       <td style="white-space:nowrap">${phaseBadge(ph)}</td>
       <td style="color:var(--accent-light);font-family:'JetBrains Mono',monospace;font-weight:600">${fmt(e)}</td>
       <td style="color:var(--text3);font-family:'JetBrains Mono',monospace">${fmt(p)}</td>
@@ -2231,6 +2232,13 @@ function renderAll() {
   else if (active === 'sec-ads') renderAds();
   else if (active === 'sec-analytics') renderAnalytics();
   else if (active === 'sec-settings') renderSettings();
+  // always keep dashboard data fresh when on other sections
+  if (active !== 'sec-dashboard') {
+    // update dash pipeline/funnel silently
+    const pEl = document.getElementById('dash-pipeline');
+    const fEl = document.getElementById('dash-funnel');
+    if (pEl || fEl) renderDashboard();
+  }
 }
 
 
