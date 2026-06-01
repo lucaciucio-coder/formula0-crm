@@ -1981,7 +1981,7 @@ function renderDashboard() {
   if (pl) pl.textContent = periodLabels[dashPeriod] || 'panoramica in tempo reale';
   const sourceFiltered = dashFilter === 'all' ? leads : leads.filter(l => l.source === dashFilter);
   const filteredLeads = filterByPeriod(sourceFiltered);
-  const totalEarned = filteredLeads.reduce((s, l) => s + calcEarned(l), 0);
+  const totalEarned = filteredLeads.reduce((s, l) => s + calcEarned(l), 0) + (dashFilter === 'all' ? totalExtraIncome() : 0);
   const showAds = dashFilter === 'all' || dashFilter === 'ads';
   const totalSpent = campaigns.reduce((s, c) => s + c.spent, 0);
   // profitto netto: solo guadagno lead ADS - spesa ads (organico non c'entra)
