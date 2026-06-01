@@ -573,8 +573,8 @@
         <button class="btn ghost" onclick="goToLeads()" style="font-size:12px;padding:5px 10px">Vedi tutti →</button>
       </div>
       <div class="table-wrap"><table>
-        <colgroup><col style="width:auto"><col style="width:150px"><col style="width:100px"><col style="width:130px"><col style="width:110px"><col style="width:100px"></colgroup>
-        <thead><tr><th>Lead</th><th>Stato</th><th>Fonte</th><th>Fase</th><th>Guadagnato</th><th>Potenziale</th></tr></thead>
+        <colgroup><col style="width:auto"><col style="width:150px"><col style="width:90px"><col style="width:110px"><col style="width:120px"><col style="width:100px"><col style="width:90px"></colgroup>
+        <thead><tr><th>Lead</th><th>Stato</th><th>Fonte</th><th>Piattaforma</th><th>Fase</th><th>Guadagnato</th><th>Potenziale</th></tr></thead>
         <tbody id="dash-leads-tbody"></tbody>
       </table></div>
       <div id="dash-leads-empty" class="empty" style="display:none"><p>Nessun lead ancora</p></div>
@@ -712,6 +712,10 @@
         <div class="card-body" id="analytics-conv"></div>
       </div>
     </div>
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-header"><div class="card-title">Lead per social (organico)</div></div>
+      <div class="card-body" id="analytics-social"></div>
+    </div>
     <div class="card">
       <div class="card-header"><div class="card-title">Da dove vengono i soldi</div></div>
       <div class="card-body" id="analytics-breakdown"></div>
@@ -783,7 +787,15 @@
         <div class="field" id="camp-field"><label>Campagna</label>
           <select id="l-campaign"><option value="">— nessuna —</option></select>
         </div>
-
+        <div class="field" id="social-field" style="display:none"><label>Social</label>
+          <select id="l-social">
+            <option value="">— seleziona —</option>
+            <option value="instagram">Instagram</option>
+            <option value="tiktok">TikTok</option>
+            <option value="telegram">Telegram</option>
+            <option value="youtube">YouTube</option>
+          </select>
+        </div>
       </div>
       <div class="field" style="margin-bottom:14px">
         <label>Stato pipeline</label>
@@ -1173,6 +1185,7 @@ function resetLeadForm() {
   document.getElementById('lead-modal-title').textContent = 'Nuovo lead';
   buildExtraRows([]);
   const pipEl = document.getElementById('l-pipeline'); if (pipEl) pipEl.value = 'da_contattare';
+  const socialEl = document.getElementById('l-social'); if (socialEl) socialEl.value = '';
   _bonusCustomEarns = {};
   _bonusAppStates = {};
   const dateEl = document.getElementById('l-date'); if (dateEl) { const n = new Date(); dateEl.value = `${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}-${String(n.getDate()).padStart(2,'0')}`; }
@@ -1594,10 +1607,15 @@ function toggleCampField() {
   const src = document.getElementById("l-source").value;
   const campField = document.getElementById("camp-field");
   if (campField) campField.style.display = src === "ads" ? "" : "none";
-  // clear campaign when not ads
+  const socialField = document.getElementById("social-field");
+  if (socialField) socialField.style.display = src === "organico" ? "" : "none";
   if (src !== "ads") {
     const sel = document.getElementById("l-campaign");
     if (sel) sel.value = "";
+  }
+  if (src !== "organico") {
+    const ss = document.getElementById("l-social");
+    if (ss) ss.value = "";
   }
 }
 function populateCampSelect(selectedVal) {
@@ -1623,6 +1641,7 @@ function saveLead() {
     age: document.getElementById('l-age').value,
     pipeline: document.getElementById('l-pipeline')?.value || 'da_contattare',
     source: document.getElementById('l-source').value,
+    social: document.getElementById('l-source').value === 'organico' ? (document.getElementById('l-social')?.value || '') : '',
     campaign: document.getElementById('l-source').value === 'ads' ? document.getElementById('l-campaign').value : '',
     note: document.getElementById('l-note').value.trim(),
     lifetimePrice: parseFloat(document.getElementById('l-lifetime-price')?.value) || 600,
@@ -1674,6 +1693,7 @@ function openEditLead(id) {
   document.getElementById('l-source').value = lead.source;
   toggleCampField();
   const pipSel = document.getElementById('l-pipeline'); if (pipSel) pipSel.value = lead.pipeline || 'da_contattare';
+  const socialSel = document.getElementById('l-social'); if (socialSel) socialSel.value = lead.social || '';
   document.getElementById('l-note').value = lead.note || '';
   buildExtraRows(lead.extras || (lead.earned ? [{amt: lead.earned, note: lead.earnedNote || ''}] : []));
   _bonusCustomEarns = lead.bonusCustomEarns || {};
@@ -1910,7 +1930,7 @@ function openDetail(id) {
     <div class="divider"></div>
     <div class="section-label" style="margin-bottom:8px">Dettagli</div>
     <div class="info-row"><span class="info-row-label">Stato pipeline</span><span class="info-row-val">${pipelineBadge(lead, true)}</span></div>
-    <div class="info-row"><span class="info-row-label">Fonte</span><span class="info-row-val"><span class="badge ${SOURCE_BADGE[lead.source] || 'badge-gray'}">${SOURCE_LABEL[lead.source] || lead.source}</span></span></div>
+    <div class="info-row"><span class="info-row-label">Fonte</span><span class="info-row-val" style="display:flex;align-items:center;gap:8px"><span class="badge ${SOURCE_BADGE[lead.source] || 'badge-gray'}">${SOURCE_LABEL[lead.source] || lead.source}</span>${lead.social ? `<span style="font-size:12px;color:var(--text2);font-weight:500">${{instagram:'Instagram',tiktok:'TikTok',telegram:'Telegram',youtube:'YouTube'}[lead.social] || lead.social}</span>` : ''}</span></div>
     ${lead.source === 'ads' ? `<div class="info-row"><span class="info-row-label">Campagna</span><span class="info-row-val">${campName}</span></div>` : ''}
     ${lead.phone ? `<div class="info-row"><span class="info-row-label">Contatto</span><span class="info-row-val">${lead.phone}</span></div>` : ''}
     ${lead.age ? `<div class="info-row"><span class="info-row-label">Età</span><span class="info-row-val">${lead.age} anni</span></div>` : ''}
@@ -2014,6 +2034,7 @@ function renderDashboard() {
       <td><div class="lead-cell"><div class="avatar">${(l.nome[0] + (l.cognome?.[0] || '')).toUpperCase()}</div><div><div class="lead-name">${l.nome} ${l.cognome || ''}</div></div></div></td>
       <td>${pipelineBadge(l, true)}</td>
       <td><span class="badge ${SOURCE_BADGE[l.source] || 'badge-gray'}">${SOURCE_LABEL[l.source] || l.source}</span></td>
+      <td style="font-size:12px;color:var(--text2)">${l.social ? ({instagram:'Instagram',tiktok:'TikTok',telegram:'Telegram',youtube:'YouTube'}[l.social]||l.social) : '—'}</td>
       <td style="white-space:nowrap">${phaseBadge(ph)}</td>
       <td style="color:var(--accent-light);font-family:'JetBrains Mono',monospace;font-weight:600">${fmt(e)}</td>
       <td style="color:var(--text3);font-family:'JetBrains Mono',monospace">${fmt(p)}</td>
@@ -2142,6 +2163,36 @@ function renderAnalytics() {
   }).join('');
 
   const total = leads.length || 1;
+  // social platform analytics
+  const SOCIAL_LABELS_A = {instagram:'Instagram',tiktok:'TikTok',telegram:'Telegram',youtube:'YouTube'};
+  const socialSrcs = ['instagram','tiktok','telegram','youtube'];
+  const organicLeads = leads.filter(l => l.source === 'organico');
+  const socialData = socialSrcs.map(s => ({
+    id: s,
+    label: SOCIAL_LABELS_A[s],
+    count: organicLeads.filter(l => l.social === s).length,
+    earned: organicLeads.filter(l => l.social === s).reduce((sum,l) => sum + calcEarned(l), 0)
+  })).filter(s => s.count > 0).sort((a,b) => b.count - a.count);
+  const bestSocial = socialData[0];
+  const socialEl = document.getElementById('analytics-social');
+  if (socialEl) {
+    if (!socialData.length) {
+      socialEl.innerHTML = '<div style="color:var(--text3);font-size:13px">Nessun lead organico con social tracciato ancora.</div>';
+    } else {
+      const maxCount = bestSocial.count;
+      socialEl.innerHTML = '<div style="display:flex;flex-direction:column;gap:10px">' +
+        socialData.map(s => `<div style="display:flex;align-items:center;gap:12px">
+          <div style="width:90px;font-size:13px;font-weight:500;color:var(--text2);flex-shrink:0">${s.label}</div>
+          <div style="flex:1">
+            <div class="roi-bar-bg"><div class="roi-bar-fill" style="width:${Math.round(s.count/maxCount*100)}%;background:linear-gradient(90deg,var(--accent),var(--accent-light))"></div></div>
+          </div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text2);width:50px;text-align:right">${s.count} lead</div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--accent-light);width:60px;text-align:right">${fmt(s.earned)}</div>
+          ${s.id === bestSocial.id ? '<span class="winner-badge">★ Funziona meglio</span>' : '<div style="width:110px"></div>'}
+        </div>`).join('') + '</div>';
+    }
+  }
+
   document.getElementById('analytics-conv').innerHTML = STAGES.map(s => {
     const count = leads.filter(l => l.stages[s.id]).length;
     const pct = Math.round(count / total * 100);
